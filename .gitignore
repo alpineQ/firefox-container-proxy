@@ -6,3 +6,5 @@ source-artifacts
 node_modules
 tmpProfile
 *.module.scss.d.ts
+.env
+*.xpi

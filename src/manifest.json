@@ -1,13 +1,16 @@
 {
   "manifest_version": 2,
-  "name": "Container proxy",
-  "version": "0.1.22",
+  "name": "Container & Extension Proxy",
+  "version": "0.2.3",
   "description": "__MSG_General_extensionDescription__",
   "default_locale": "en",
-  "applications": {
+  "browser_specific_settings": {
     "gecko": {
-      "id": "contaner-proxy@bekh-ivanov.me",
-      "strict_min_version": "91.1.0"
+      "id": "container-proxy@alpineq.github.io",
+      "strict_min_version": "91.1.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "browser_action": {
