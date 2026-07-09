@@ -8,6 +8,17 @@ import _OnRequestDetails = browser.proxy._OnRequestDetails
 
 const localhosts = new Set(['localhost', '127.0.0.1', '[::1]'])
 
+const maxObservedHosts = 5
+
+function extensionUuidFromUrl (url: string | undefined): string | null {
+  if (url === undefined || url === '') return null
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'moz-extension:') return parsed.hostname
+  } catch (e) {}
+  return null
+}
+
 type DoNotProxy = never[]
 export const doNotProxy: DoNotProxy = []
 
@@ -26,6 +37,34 @@ export default class BackgroundMain {
 
   constructor ({ store }: { store: Store }) {
     this.store = store
+  }
+
+  async recordObservedExtension (uuid: string, requestUrl: string): Promise<void> {
+    let host: string
+    try {
+      host = new URL(requestUrl).hostname
+    } catch (e) {
+      return
+    }
+    const observed = await this.store.getObservedExtensions()
+    const entry = observed[uuid] ?? { hosts: [], lastSeen: 0 }
+    const isNewHost = !entry.hosts.includes(host)
+    if (isNewHost) {
+      entry.hosts = [host, ...entry.hosts].slice(0, maxObservedHosts)
+    }
+    entry.lastSeen = Date.now()
+    observed[uuid] = entry
+    if (isNewHost) {
+      await this.store.saveObservedExtensions(observed)
+    }
+  }
+
+  private ownExtensionUuid (): string | null {
+    try {
+      return new URL(browser.runtime.getURL('')).hostname
+    } catch (e) {
+      return null
+    }
   }
 
   initializeAuthListener (cookieStoreId: string, proxy: HttpProxySettings | HttpsProxySettings): void {
@@ -60,8 +99,21 @@ export default class BackgroundMain {
   }
 
   // TODO: Fix in @types/firefox-webext-browser
-  async onRequest (requestDetails: Pick<_OnRequestDetails, 'cookieStoreId' | 'url'>): Promise<DoNotProxy | ProxyInfo[]> {
+  async onRequest (requestDetails: Pick<_OnRequestDetails, 'cookieStoreId' | 'url'> & { originUrl?: string, documentUrl?: string }): Promise<DoNotProxy | ProxyInfo[]> {
     try {
+      const extensionUuid = extensionUuidFromUrl(requestDetails.originUrl) ?? extensionUuidFromUrl(requestDetails.documentUrl)
+      if (extensionUuid !== null && extensionUuid !== this.ownExtensionUuid()) {
+        void this.recordObservedExtension(extensionUuid, requestDetails.url)
+        const proxy = await this.store.getProxyForExtension(extensionUuid)
+        if (proxy === null) {
+          return doNotProxy
+        }
+        if (proxy.type === ProxyType.Http || proxy.type === ProxyType.Https) {
+          this.initializeAuthListener(requestDetails.cookieStoreId ?? '', proxy)
+        }
+        return [proxy.asProxyInfo()]
+      }
+
       const cookieStoreId = requestDetails.cookieStoreId ?? ''
       if (cookieStoreId === '') {
         console.error('cookieStoreId is not defined', requestDetails)

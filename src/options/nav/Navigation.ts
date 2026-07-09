@@ -16,6 +16,12 @@ class Navigation implements ClassComponent {
           testId: 'proxies',
           text: 'OptionsNavigation_proxies',
           classes: s.proxies
+        }),
+        m(NavItem, {
+          href: '/extensions',
+          testId: 'extensions',
+          text: 'OptionsNavigation_extensions',
+          classes: s.extensions
         })
       ]),
       m('section', { class: s.support }, [

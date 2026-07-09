@@ -85,6 +85,43 @@ describe('BackgroundMain', function () {
       })
     })
 
+    describe('extension traffic', () => {
+      const extUuid = '11111111-2222-3333-4444-555555555555'
+      const originUrl = `moz-extension://${extUuid}/background.html`
+
+      it('should route extension request through the assigned proxy regardless of container', async () => {
+        const host = 'proxyForExtension.example.com'
+        await givenSomeProxyIsSetUpForExtension({ host, uuid: extUuid })
+
+        const result = await backgroundMain.onRequest({
+          cookieStoreId: 'firefox-default',
+          url: 'https://sponsor.ajay.app/api/skipSegments',
+          originUrl
+        })
+
+        expect(result).to.be.an('array')
+        expect(result[0].host).to.be.equal(host)
+      })
+
+      it('should not proxy extension request when no proxy is assigned', async () => {
+        const result = await backgroundMain.onRequest({
+          cookieStoreId: 'firefox-default',
+          url: 'https://sponsor.ajay.app/api/skipSegments',
+          originUrl
+        })
+
+        expect(result).to.be.deep.equal(doNotProxy)
+      })
+
+      it('should record the observed extension and its destination host', async () => {
+        await backgroundMain.recordObservedExtension(extUuid, 'https://sponsor.ajay.app/api/skipSegments')
+
+        const observed = await store.getObservedExtensions()
+        expect(observed[extUuid]).to.not.be.undefined
+        expect(observed[extUuid].hosts).to.include('sponsor.ajay.app')
+      })
+    })
+
     describe('proxying of local addresses is enabled', () => {
       localAddresses.forEach(url => {
         it(`should return array with proxy: ${url}`, async () => {
@@ -114,4 +151,17 @@ async function givenSomeProxyIsSetUpForContainer ({ host, containerId, doNotProx
   await store.putProxy(tryFromDao(proxy) as ProxySettings)
 
   await store.setContainerProxyRelation(containerId, proxyId)
+}
+
+async function givenSomeProxyIsSetUpForExtension ({ host, uuid }: any): Promise<void> {
+  const proxyId = 'proxyExt1'
+  const proxy: any = {
+    id: proxyId,
+    type: 'socks',
+    host: (host as string) ?? 'example.com',
+    port: 1080
+  }
+  await store.putProxy(tryFromDao(proxy) as ProxySettings)
+
+  await store.setExtensionProxyRelation(uuid, proxyId)
 }

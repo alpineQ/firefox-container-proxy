@@ -27,6 +27,18 @@
         "message": "Support",
         "description": "Navigation link title for support information page"
     },
+    "OptionsNavigation_extensions": {
+        "message": "Extensions",
+        "description": "Navigation link title for assigning proxies to extension traffic"
+    },
+    "ExtensionList_empty": {
+        "message": "No extension traffic observed yet. Open pages and let your extensions make network requests, then reload this page.",
+        "description": "Shown on the extensions page when no extension traffic has been captured"
+    },
+    "ExtensionList_recentHosts": {
+        "message": "Recent: $1",
+        "description": "Hint listing hosts an extension recently requested, to help identify it"
+    },
     "ContainerList_proxyDisabled": {
         "message": "Directly",
         "description": "Config containers to not use proxy"

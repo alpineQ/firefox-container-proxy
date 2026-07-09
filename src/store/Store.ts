@@ -61,6 +61,13 @@ export namespace ProxyDao {
   }
 }
 
+export interface ObservedExtension {
+  hosts: string[]
+  lastSeen: number
+}
+
+export type ObservedExtensions = { [uuid: string]: ObservedExtension }
+
 export class Store {
   async getAllProxies (): Promise<ProxySettings[]> {
     const proxyDaos = await this.getAllProxyDaos()
@@ -129,6 +136,43 @@ export class Store {
       .map(fillInDefaults)
       .map(tryFromDao)
       .filter(p => p !== undefined) as ProxySettings[]
+  }
+
+  async getExtensionRelations (): Promise<{ [uuid: string]: string }> {
+    const result = await browser.storage.local.get('extensionRelations')
+    return result.extensionRelations as { [uuid: string]: string } ?? {}
+  }
+
+  async setExtensionProxyRelation (uuid: string, proxyId: string): Promise<void> {
+    const relations = await this.getExtensionRelations()
+    relations[uuid] = proxyId
+    await browser.storage.local.set({ extensionRelations: relations })
+  }
+
+  async deleteExtensionProxyRelation (uuid: string): Promise<void> {
+    const relations = await this.getExtensionRelations()
+    if (uuid in relations) {
+      delete relations[uuid] // eslint-disable-line @typescript-eslint/no-dynamic-delete
+      await browser.storage.local.set({ extensionRelations: relations })
+    }
+  }
+
+  async getProxyForExtension (uuid: string): Promise<ProxySettings | null> {
+    const relations = await this.getExtensionRelations()
+    const proxyId = relations[uuid]
+    if (proxyId === undefined) {
+      return null
+    }
+    return await this.getProxyById(proxyId)
+  }
+
+  async getObservedExtensions (): Promise<ObservedExtensions> {
+    const result = await browser.storage.local.get('observedExtensions')
+    return result.observedExtensions as ObservedExtensions ?? {}
+  }
+
+  async saveObservedExtensions (observed: ObservedExtensions): Promise<void> {
+    await browser.storage.local.set({ observedExtensions: observed })
   }
 
   private async saveProxyDaos (p: ProxyDao[]): Promise<void> {
