@@ -5,6 +5,10 @@
 
 [Extension page](https://addons.mozilla.org/en-US/firefox/addon/container-proxy/)
 
+## About this fork
+
+**Container & Extension Proxy** is a fork of [firefox-container-proxy](https://github.com/bekh6ex/firefox-container-proxy) by Aleksey Bekh-Ivanov (BSD 2-Clause). It adds the ability to route a browser extension's own background traffic (e.g. SponsorBlock) through one of the configured proxies, via a new "Extensions" settings page. All credit for the original extension goes to the upstream author.
+
 ## Permissions
 
   * **cookies**: needed to identify to which container request belongs
